@@ -2,6 +2,7 @@ package sign
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/martindrlik/sign/phash"
 )
@@ -21,10 +22,14 @@ type Hasher interface {
 var (
 	PasswordHasher Hasher = phash.Default
 
+	mutex        sync.RWMutex
 	userRegister = make(map[string][]byte)
 )
 
 func Register(username string) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if username == "" {
 		return ErrEmptyUsername
 	}
@@ -36,6 +41,9 @@ func Register(username string) error {
 }
 
 func Deregister(username string) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if _, ok := userRegister[username]; !ok {
 		return ErrNotRegistered
 	}
@@ -44,6 +52,9 @@ func Deregister(username string) error {
 }
 
 func SetPassword(username, password string) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if _, ok := userRegister[username]; !ok {
 		return ErrNotRegistered
 	}
@@ -56,6 +67,9 @@ func SetPassword(username, password string) error {
 }
 
 func MatchPassword(username, password string) (bool, error) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
 	hash, ok := userRegister[username]
 	if !ok {
 		return false, ErrNotRegistered
